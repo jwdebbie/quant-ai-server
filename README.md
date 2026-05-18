@@ -4,6 +4,7 @@ Multi-Agent LLM 기반 퀀트 투자 분석 서비스 AI 서버
 
 ## 프로젝트 구조
 
+```
 ai-server/
 ├── agents/
 │   ├── agent1_collect.py   ← 희재 작성
@@ -18,6 +19,7 @@ ai-server/
 ├── db/
 ├── main.py
 └── .env
+```
 
 ## 브랜치 전략
 
