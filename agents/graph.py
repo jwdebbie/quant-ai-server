@@ -1,0 +1,73 @@
+from langgraph.graph import StateGraph, END
+from models.state import AgentState
+
+# 희재 노드 import
+from agents.agent1_collect import collect_price_node, calculate_indicators_node
+from agents.agent2_strategy import strategy_node, backtest_node
+
+# 주원 더미 노드
+def collect_news_node(state: AgentState) -> dict:
+    return {"news_articles": []}
+
+def analyze_sentiment_node(state: AgentState) -> dict:
+    return {"sentiment_scores": {}}
+
+def portfolio_calc_node(state: AgentState) -> dict:
+    return {"portfolio": {}}
+
+def recommendation_reason_node(state: AgentState) -> dict:
+    return {"portfolio_reason": "더미 추천 근거"}
+
+def execute_order_node(state: AgentState) -> dict:
+    return {"orders": []}
+
+# StateGraph 구성
+def build_graph():
+    graph = StateGraph(AgentState)
+
+    # 노드 등록
+    graph.add_node("collect_price", collect_price_node)
+    graph.add_node("calculate_indicators", calculate_indicators_node)
+    graph.add_node("collect_news", collect_news_node)
+    graph.add_node("analyze_sentiment", analyze_sentiment_node)
+    graph.add_node("strategy", strategy_node)
+    graph.add_node("backtest", backtest_node)
+    graph.add_node("portfolio_calc", portfolio_calc_node)
+    graph.add_node("recommendation_reason", recommendation_reason_node)
+    graph.add_node("execute_order", execute_order_node)
+
+    # 실행 순서 연결
+    graph.set_entry_point("collect_price")
+    graph.add_edge("collect_price", "calculate_indicators")
+    graph.add_edge("calculate_indicators", "collect_news")
+    graph.add_edge("collect_news", "analyze_sentiment")
+    graph.add_edge("analyze_sentiment", "strategy")
+    graph.add_edge("strategy", "backtest")
+    graph.add_edge("backtest", "portfolio_calc")
+    graph.add_edge("portfolio_calc", "recommendation_reason")
+    graph.add_edge("recommendation_reason", "execute_order")
+    graph.add_edge("execute_order", END)
+
+    return graph.compile()
+
+
+# 테스트
+if __name__ == "__main__":
+    app = build_graph()
+    result = app.invoke({
+        "user_id": 1,
+        "risk_level": "AGGRESSIVE",
+        "investment_amount": 10000000,
+        "price_data": {},
+        "indicators": {},
+        "strategy_result": {},
+        "backtest_result": {},
+        "orders": [],
+        "news_articles": [],
+        "sentiment_scores": {},
+        "portfolio": {},
+        "portfolio_reason": "",
+        "risk_ok": False,
+        "error_log": []
+    })
+    print(result)
