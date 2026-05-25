@@ -6,8 +6,7 @@ from agents.agent1_collect import collect_price_node, calculate_indicators_node
 from agents.agent2_strategy import strategy_node, backtest_node
 
 # 주원 더미 노드
-def collect_news_node(state: AgentState) -> dict:
-    return {"news_articles": []}
+from services.nlp.news_collector import collect_news_node # 실제 뉴스 api 함수로 교체
 
 def analyze_sentiment_node(state: AgentState) -> dict:
     return {"sentiment_scores": {}}

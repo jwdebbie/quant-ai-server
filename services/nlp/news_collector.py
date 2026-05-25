@@ -66,4 +66,7 @@ def collect_news_to_csv():
 if __name__ == "__main__":
     collect_news_to_csv()
     
-    
+# agents/graph.py 연결가능하게 노드 형태로 변환
+def collect_news_node(state: AgentState) -> dict:
+    news_list = collect_news_to_csv()
+    return {"news_articles": news_list}   
