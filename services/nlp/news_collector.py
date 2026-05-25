@@ -6,6 +6,7 @@ import pandas as pd
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+from models.state import AgentState
 
 load_dotenv()
 
