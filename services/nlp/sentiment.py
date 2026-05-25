@@ -6,6 +6,7 @@ from google import genai
 import json
 import os
 import re
+import time 
 from dotenv import load_dotenv
 from models.state import AgentState
 
@@ -42,7 +43,9 @@ def analyze_sentiment(news_text: str) -> dict:
 
 
     
-# s    
+# 종목별 뉴스 감성 분석 노드
+# 수집된 뉴스 전체 → Gemini API 분석 → 종목별 평균 점수 반환
+
 def analyze_sentiment_node(state: AgentState) -> dict:
     news_articles = state["news_articles"]
     sentiment_scores = {}
