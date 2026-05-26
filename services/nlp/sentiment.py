@@ -26,7 +26,7 @@ def analyze_sentiment(news_text: str) -> dict:
 {{"score": 0.7, "reason": "이유를 여기에"}}
 """
     response = client.models.generate_content(
-        model="gemini-2.0-flash-lite",
+        model="gemini-2.5-flash",
         contents=prompt
     )
 
@@ -55,6 +55,9 @@ def analyze_sentiment_node(state: AgentState) -> dict:
         text = news["title"] + " " + news["content"]
 
         result = analyze_sentiment(text)
+        
+        # 각 호출 사이 4초 대기 (분당 15건 한도 안전유지 위해)
+        time.sleep(4)
 
         if stock_code not in sentiment_scores:
             sentiment_scores[stock_code] = []
