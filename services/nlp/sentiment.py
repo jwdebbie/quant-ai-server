@@ -26,7 +26,7 @@ def analyze_sentiment(news_text: str) -> dict:
 {{"score": 0.7, "reason": "이유를 여기에"}}
 """
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite",
         contents=prompt
     )
 
