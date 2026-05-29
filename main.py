@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from agents.graph import build_graph
 
 app = FastAPI(title="Quant AI Server")
 
@@ -31,4 +32,33 @@ def run_agent(request: AgentRequest):
         portfolio={"stocks": [], "expected_return": 0.0, "mdd": 0.0, "sharpe": 0.0},
         portfolio_reason="더미 응답입니다.",
         orders=[]
+    )
+
+class ReportResponse(BaseModel):
+    sentiment_scores: dict
+    portfolio_reason: str
+
+@app.post("/report/generate")
+def generate_report():
+    # StateGraph 실행
+    graph = build_graph()
+    result = graph.invoke({
+        "user_id": 0,
+        "risk_level": "NEUTRAL",
+        "investment_amount": 0,
+        "price_data": {},
+        "indicators": {},
+        "strategy_result": {},
+        "backtest_result": {},
+        "orders": [],
+        "news_articles": [],
+        "sentiment_scores": {},
+        "portfolio": {},
+        "portfolio_reason": "",
+        "risk_ok": False,
+        "error_log": []
+    })
+    return ReportResponse(
+        sentiment_scores=result.get("sentiment_scores", {}),
+        portfolio_reason=result.get("portfolio_reason", "")
     )
