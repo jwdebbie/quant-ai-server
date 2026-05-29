@@ -1,10 +1,14 @@
-# gemini api 테스트 코드
+# 감성 분석 노드
+#  뉴스 텍스트 → Gemini API → 호재/악재 점수 (-1.0 ~ +1.0)
+#  수집된 뉴스 전체 분석 후 종목별 평균 점수 반환
 
 from google import genai
 import json
 import os
 import re
+import time 
 from dotenv import load_dotenv
+from models.state import AgentState
 
 load_dotenv()
 
@@ -22,7 +26,7 @@ def analyze_sentiment(news_text: str) -> dict:
 {{"score": 0.7, "reason": "이유를 여기에"}}
 """
     response = client.models.generate_content(
-        model="gemini-2.5-flash-lite",
+        model="gemini-3.1-flash-lite",
         contents=prompt
     )
 
@@ -38,8 +42,51 @@ def analyze_sentiment(news_text: str) -> dict:
     return result
 
 
-# 테스트
+    
+# 종목별 뉴스 감성 분석 노드
+# 수집된 뉴스 전체 → Gemini API 분석 → 종목별 평균 점수 반환
+
+def analyze_sentiment_node(state: AgentState) -> dict:
+    news_articles = state["news_articles"]
+    sentiment_scores = {}
+
+    for news in news_articles:
+        stock_code = news["stock_code"]
+        text = news["title"] + " " + news["content"]
+
+        result = analyze_sentiment(text)
+        
+        # 각 호출 사이 4초 대기 (분당 15건 한도 안전유지 위해)
+        time.sleep(4)
+
+        if stock_code not in sentiment_scores:
+            sentiment_scores[stock_code] = []
+        sentiment_scores[stock_code].append(result)
+
+    # 종목별 평균 점수 계산
+    avg_scores = {}
+    for stock_code, scores in sentiment_scores.items():
+        avg_score = sum(s["score"] for s in scores) / len(scores)
+        avg_scores[stock_code] = {
+            "score": round(avg_score, 2),
+            "count": len(scores)
+        }
+        print(f"{stock_code} 감성 점수: {avg_score:.2f} ({len(scores)}건)")
+
+    return {"sentiment_scores": avg_scores}
+
+
 if __name__ == "__main__":
-    news = "삼성전자, 3분기 영업이익 예상치 30% 상회하며 어닝 서프라이즈 달성"
-    result = analyze_sentiment(news)
+    # 더미 State로 테스트
+    dummy_state = {
+        "news_articles": [
+            {
+                "stock_code": "005930",
+                "stock_name": "삼성전자",
+                "title": "삼성전자, 3분기 영업이익 예상치 30% 상회",
+                "content": "어닝 서프라이즈 달성으로 주가 상승 기대"
+            }
+        ]
+    }
+    result = analyze_sentiment_node(dummy_state)
     print(result)

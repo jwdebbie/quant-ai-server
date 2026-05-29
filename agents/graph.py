@@ -1,22 +1,21 @@
 from langgraph.graph import StateGraph, END
 from models.state import AgentState
+from services.nlp.news_collector import collect_news_node
+from services.nlp.sentiment import analyze_sentiment_node
+from services.nlp.report_generator import generate_report_node
 
 # 희재 노드 import
 from agents.agent1_collect import collect_price_node, calculate_indicators_node
 from agents.agent2_strategy import strategy_node, backtest_node
 
 # 주원 더미 노드
-def collect_news_node(state: AgentState) -> dict:
-    return {"news_articles": []}
 
-def analyze_sentiment_node(state: AgentState) -> dict:
-    return {"sentiment_scores": {}}
+# (1) 뉴스 더미 함수 교체 완료
+# (2) 감성 분석 더미 함수 교체 완료
+# (3) 종목 추천 근거 함수 교체 완료
 
 def portfolio_calc_node(state: AgentState) -> dict:
     return {"portfolio": {}}
-
-def recommendation_reason_node(state: AgentState) -> dict:
-    return {"portfolio_reason": "더미 추천 근거"}
 
 def execute_order_node(state: AgentState) -> dict:
     return {"orders": []}
@@ -33,7 +32,7 @@ def build_graph():
     graph.add_node("strategy", strategy_node)
     graph.add_node("backtest", backtest_node)
     graph.add_node("portfolio_calc", portfolio_calc_node)
-    graph.add_node("recommendation_reason", recommendation_reason_node)
+    graph.add_node("recommendation_reason", generate_report_node)
     graph.add_node("execute_order", execute_order_node)
 
     # 실행 순서 연결
