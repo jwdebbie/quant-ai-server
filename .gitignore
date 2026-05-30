@@ -2,4 +2,8 @@ venv/
 .env
 __pycache__/
 *.pyc
+test_dummy.py
+verify_pipeline.py
 data/
+.kis_token.json
+.claude/
