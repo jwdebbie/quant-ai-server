@@ -12,12 +12,7 @@ load_dotenv()
 KIS_APP_KEY = os.getenv("KIS_APP_KEY")
 KIS_APP_SECRET = os.getenv("KIS_APP_SECRET")
 
-TICKERS_OVERSEAS = [
-    "AAPL",  "TSLA",  "NVDA",  "MSFT",  "GOOGL",
-    "AMZN",  "META",  "AMD",   "NFLX",  "JPM",
-    "V",     "WMT",   "XOM",   "COIN",  "PLTR",
-    "UBER",  "TSM",   "BABA",  "PYPL",  "INTC",
-]
+TICKERS_OVERSEAS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]
 
 TICKERS_DOMESTIC = [
     "005930",  # 삼성전자
@@ -25,21 +20,6 @@ TICKERS_DOMESTIC = [
     "035420",  # NAVER
     "005380",  # 현대차
     "000270",  # 기아
-    "068270",  # 셀트리온
-    "051910",  # LG화학
-    "035720",  # 카카오
-    "066570",  # LG전자
-    "373220",  # LG에너지솔루션
-    "207940",  # 삼성바이오로직스
-    "006400",  # 삼성SDI
-    "012330",  # 현대모비스
-    "017670",  # SK텔레콤
-    "030200",  # KT
-    "005490",  # POSCO홀딩스
-    "086790",  # 하나금융지주
-    "105560",  # KB금융
-    "032830",  # 삼성생명
-    "028260",  # 삼성물산
 ]
 
 def collect_overseas_prices() -> dict:
