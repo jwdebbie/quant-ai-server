@@ -11,12 +11,21 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
-    # 감성 점수 요약 텍스트 생성
+    # 감성 점수 요약
     sentiment_summary = ""
     for stock_code, data in sentiment_scores.items():
         score = data.get("score", 0)
         count = data.get("count", 0)
         sentiment_summary += f"- {stock_code}: 감성 점수 {score} ({count}건 분석)\n"
+
+    # 전략 결과 요약 추가
+    strategy_summary = ""
+    if strategy_result:
+        ranked = strategy_result.get("ranked_stocks", [])[:5]  # 상위 5개
+        scores = strategy_result.get("momentum_scores", {})
+        for stock in ranked:
+            score = scores.get(stock, 0)
+            strategy_summary += f"- {stock}: 모멘텀 점수 {score:.2f}\n"
 
     prompt = f"""
 당신은 주식 시장 전문 애널리스트입니다.
@@ -26,9 +35,12 @@ def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
 [종목별 뉴스 감성 점수]
 {sentiment_summary}
 
+[모멘텀 전략 상위 종목]
+{strategy_summary}
+
 다음 형식으로 리포트를 작성하세요.
 1. 시장 전반 요약 (2~3문장)
-2. 주목 종목 (감성 점수 기준 상위 종목)
+2. 주목 종목 (모멘텀 점수와 감성 점수 종합 상위 종목)
 3. 투자 시 유의사항 (1~2문장)
 
 간결하고 전문적으로 작성하세요.
