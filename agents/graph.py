@@ -4,6 +4,10 @@ from services.nlp.news_collector import collect_news_node
 from services.nlp.sentiment import analyze_sentiment_node
 from services.nlp.report_generator import generate_report_node
 
+#임시
+import os
+import json
+
 # 희재 노드 import
 from agents.agent1_collect import collect_price_node, calculate_indicators_node
 from agents.agent2_strategy import strategy_node, backtest_node
@@ -69,4 +73,23 @@ if __name__ == "__main__":
         "risk_ok": False,
         "error_log": []
     })
-    print(result)
+    # 결과 JSON 저장
+    save_data = {
+        "sentiment_scores": result.get("sentiment_scores", {}),
+        "strategy_result": result.get("strategy_result", {}),
+        "backtest_result": {
+            "curve": result.get("backtest_result", {}).get("curve", []),
+            "mdd": result.get("backtest_result", {}).get("mdd", 0),
+            "sharpe": result.get("backtest_result", {}).get("sharpe", 0),
+            "expected_return": result.get("backtest_result", {}).get("expected_return", 0),
+        },
+        "portfolio_reason": result.get("portfolio_reason", ""),
+        "risk_level": result.get("risk_level", "AGGRESSIVE"),
+        "generated_at": "2026-05-31 08:00:00"
+    }
+
+    os.makedirs("data", exist_ok=True)
+    with open("data/result.json", "w", encoding="utf-8") as f:
+        json.dump(save_data, f, ensure_ascii=False, indent=2)
+
+    print("결과 저장 완료 → data/result.json")

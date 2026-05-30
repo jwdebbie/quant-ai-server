@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quant-AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0f1117; color: #e8eaed; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+.page { display: none; }
+.page.active { display: block; }
+.header { background: #1a1d2e; border-bottom: 0.5px solid #2a2d3e; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+.logo { font-size: 20px; font-weight: 500; color: #7f77dd; }
+.logo span { color: #e8eaed; }
+.nav { display: flex; gap: 24px; }
+.nav-item { font-size: 14px; color: #888; cursor: pointer; padding: 4px 0; border-bottom: 2px solid transparent; }
+.nav-item.active { color: #e8eaed; border-bottom: 2px solid #7f77dd; }
+.main { padding: 32px; max-width: 1100px; margin: 0 auto; }
+.page-title { font-size: 22px; font-weight: 500; margin-bottom: 8px; }
+.page-sub { font-size: 14px; color: #888; margin-bottom: 32px; }
+.profile-card { background: #1a1d2e; border: 0.5px solid #2a2d3e; border-radius: 12px; padding: 24px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px; }
+.avatar { width: 56px; height: 56px; border-radius: 50%; background: #2a2050; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 500; color: #7f77dd; }
+.profile-info h2 { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+.profile-info p { font-size: 13px; color: #888; }
+.badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #2a2050; color: #7f77dd; margin-left: 8px; }
+.section-title { font-size: 13px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+.stock-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 32px; }
+.stock-card { background: #1a1d2e; border: 0.5px solid #2a2d3e; border-radius: 10px; padding: 16px; }
+.stock-code { font-size: 11px; color: #555; margin-bottom: 4px; }
+.stock-name { font-size: 14px; font-weight: 500; color: #e8eaed; margin-bottom: 8px; }
+.stock-type { font-size: 11px; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+.type-domestic { background: #1a2a3a; color: #5b9bd5; }
+.type-overseas { background: #1a3a2a; color: #4caf89; }
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
+.info-card { background: #1a1d2e; border: 0.5px solid #2a2d3e; border-radius: 10px; padding: 16px; }
+.info-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+.info-value { font-size: 18px; font-weight: 500; color: #e8eaed; }
+.go-btn { background: #7f77dd; color: white; border: none; border-radius: 8px; padding: 12px 28px; font-size: 14px; cursor: pointer; }
+.go-btn:hover { background: #6b63c9; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.metric-card { background: #1a1d2e; border: 0.5px solid #2a2d3e; border-radius: 10px; padding: 16px; }
+.metric-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+.metric-value { font-size: 22px; font-weight: 500; color: #e8eaed; }
+.metric-sub { font-size: 12px; color: #7f77dd; margin-top: 4px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.card { background: #1a1d2e; border: 0.5px solid #2a2d3e; border-radius: 12px; padding: 20px; }
+.card-title { font-size: 14px; font-weight: 500; color: #e8eaed; margin-bottom: 16px; }
+.rank-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid #2a2d3e; }
+.rank-item:last-child { border-bottom: none; }
+.rank-num { font-size: 12px; color: #555; width: 18px; }
+.rank-name { font-size: 14px; color: #e8eaed; flex: 1; }
+.rank-score { font-size: 13px; color: #7f77dd; font-weight: 500; }
+.sentiment-item { margin-bottom: 12px; }
+.sentiment-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.sentiment-name { font-size: 13px; color: #e8eaed; }
+.sentiment-score { font-size: 13px; color: #7f77dd; font-weight: 500; }
+.bar-bg { height: 6px; background: #2a2d3e; border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: #7f77dd; border-radius: 3px; }
+.report-card { background: #1a1d2e; border: 0.5px solid #2a2d3e; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+.report-text { font-size: 14px; color: #b0b3c1; line-height: 1.8; white-space: pre-wrap; }
+.chart-area { height: 180px; position: relative; }
+.auto-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #4caf89; background: #1a3a2a; padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf89; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">quant<span>-ai</span></div>
+  <div class="nav">
+    <div class="nav-item active" onclick="showPage('mypage')">마이페이지</div>
+    <div class="nav-item" onclick="showPage('dashboard')">대시보드</div>
+  </div>
+  <div style="font-size:13px; color:#888;" id="header-date"></div>
+</div>
+
+<!-- 마이페이지 -->
+<div class="page active" id="page-mypage">
+  <div class="main">
+    <div class="page-title">마이페이지</div>
+    <div class="page-sub">투자 성향과 관심 종목을 확인하세요</div>
+
+    <div class="profile-card">
+      <div class="avatar">주</div>
+      <div class="profile-info">
+        <h2>이주원 <span class="badge">AGGRESSIVE</span></h2>
+        <p>가입일 2026.05.01 · 투자금액 10,000,000원</p>
+      </div>
+    </div>
+
+    <div class="section-title">관심 종목</div>
+    <div class="stock-grid">
+      <div class="stock-card">
+        <div class="stock-code">005930</div>
+        <div class="stock-name">삼성전자</div>
+        <span class="stock-type type-domestic">국내</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">000660</div>
+        <div class="stock-name">SK하이닉스</div>
+        <span class="stock-type type-domestic">국내</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">035420</div>
+        <div class="stock-name">NAVER</div>
+        <span class="stock-type type-domestic">국내</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">005380</div>
+        <div class="stock-name">현대차</div>
+        <span class="stock-type type-domestic">국내</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">000270</div>
+        <div class="stock-name">기아</div>
+        <span class="stock-type type-domestic">국내</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">AAPL</div>
+        <div class="stock-name">애플</div>
+        <span class="stock-type type-overseas">해외</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">TSLA</div>
+        <div class="stock-name">테슬라</div>
+        <span class="stock-type type-overseas">해외</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">NVDA</div>
+        <div class="stock-name">엔비디아</div>
+        <span class="stock-type type-overseas">해외</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">MSFT</div>
+        <div class="stock-name">마이크로소프트</div>
+        <span class="stock-type type-overseas">해외</span>
+      </div>
+      <div class="stock-card">
+        <div class="stock-code">GOOGL</div>
+        <div class="stock-name">구글</div>
+        <span class="stock-type type-overseas">해외</span>
+      </div>
+    </div>
+
+    <div class="section-title">투자 정보</div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">투자 성향</div>
+        <div class="info-value">공격형</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">투자 금액</div>
+        <div class="info-value">1,000만원</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">분석 주기</div>
+        <div class="info-value">매일 08:00</div>
+      </div>
+    </div>
+
+    <button class="go-btn" onclick="showPage('dashboard')">오늘의 분석 결과 보기 →</button>
+  </div>
+</div>
+
+<!-- 대시보드 -->
+<div class="page" id="page-dashboard">
+  <div class="main">
+    <div class="auto-badge">
+      <span class="dot"></span>
+      오늘 08:00 자동 분석 완료
+    </div>
+
+    <div class="section-title">포트폴리오 요약</div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-label">백테스트 수익률</div>
+        <div class="metric-value" id="expected-return">-</div>
+        <div class="metric-sub">1년 기준</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">MDD</div>
+        <div class="metric-value" id="mdd" style="color:#e24b4a;">-</div>
+        <div class="metric-sub">최대 낙폭</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Sharpe Ratio</div>
+        <div class="metric-value" id="sharpe">-</div>
+        <div class="metric-sub">위험 조정 수익</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">분석 종목 수</div>
+        <div class="metric-value">10개</div>
+        <div class="metric-sub">국내 5 + 해외 5</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">모멘텀 랭킹 TOP 5</div>
+        <div id="ranking-list"><div style="color:#555;font-size:13px;">불러오는 중...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">종목별 감성 점수</div>
+        <div id="sentiment-list"><div style="color:#555;font-size:13px;">불러오는 중...</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-title">백테스트 수익률 곡선</div>
+      <div class="chart-area">
+        <canvas id="curve-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="report-card">
+      <div class="card-title">오늘의 시장 리포트</div>
+      <div class="report-text" id="report-text">불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STOCK_NAME = {
+  '005930':'삼성전자','000660':'SK하이닉스','035420':'NAVER',
+  '005380':'현대차','000270':'기아',
+  'AAPL':'애플','TSLA':'테슬라','NVDA':'엔비디아','MSFT':'마이크로소프트','GOOGL':'구글'
+};
+
+let chartInstance = null;
+
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dashboard') loadResult();
+}
+
+async function loadResult() {
+  try {
+    const res = await fetch('/api/result');
+    const data = await res.json();
+    if (data.error) { document.getElementById('report-text').textContent = data.error; return; }
+    updateDashboard(data);
+  } catch(e) {
+    document.getElementById('report-text').textContent = '결과를 불러올 수 없습니다.';
+  }
+}
+
+function updateDashboard(data) {
+  const backtest = data.backtest_result || {};
+  const strategy = data.strategy_result || {};
+  const sentiment = data.sentiment_scores || {};
+
+  const ret = backtest.expected_return;
+  document.getElementById('expected-return').textContent = ret ? '+' + ((ret-1)*100).toFixed(1) + '%' : '-';
+  const mdd = backtest.mdd;
+  document.getElementById('mdd').textContent = mdd ? (mdd*100).toFixed(1) + '%' : '-';
+  document.getElementById('sharpe').textContent = backtest.sharpe ? backtest.sharpe.toFixed(2) : '-';
+
+  const ranked = strategy.ranked_stocks || [];
+  const scores = strategy.momentum_scores || {};
+  document.getElementById('ranking-list').innerHTML = ranked.slice(0,5).map((code,i) =>
+    `<div class="rank-item">
+      <span class="rank-num">${i+1}</span>
+      <span class="rank-name">${STOCK_NAME[code]||code} (${code})</span>
+      <span class="rank-score">${scores[code]?scores[code].toFixed(2):'-'}</span>
+    </div>`
+  ).join('');
+
+  const sorted = Object.entries(sentiment).sort((a,b)=>b[1].score-a[1].score);
+  document.getElementById('sentiment-list').innerHTML = sorted.map(([code,d]) =>
+    `<div class="sentiment-item">
+      <div class="sentiment-row">
+        <span class="sentiment-name">${STOCK_NAME[code]||code}</span>
+        <span class="sentiment-score">${d.score.toFixed(2)}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(d.score*100).toFixed(0)}%"></div></div>
+    </div>`
+  ).join('');
+
+  const curve = backtest.curve || [];
+  if (curve.length) drawChart(curve);
+
+  let report = data.portfolio_reason || '';
+  report = report.replace(/\*\*/g,'').replace(/\*/g,'').replace(/##/g,'').replace(/^#+\s*/gm,'');
+  document.getElementById('report-text').textContent = report.trim();
+}
+
+function drawChart(curve) {
+  const ctx = document.getElementById('curve-chart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: curve.map((_,i)=>i),
+      datasets:[{
+        data: curve,
+        borderColor: '#7f77dd',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: 'rgba(127,119,221,0.08)'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>(ctx.raw*100-100).toFixed(1)+'%'}}},
+      scales: {
+        x: { display:false },
+        y: { grid:{color:'#2a2d3e'}, ticks:{color:'#888',font:{size:11},callback:v=>v.toFixed(1)+'x'} }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>

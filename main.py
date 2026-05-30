@@ -5,6 +5,23 @@ from agents.graph import build_graph
 app = FastAPI(title="Quant AI Server")
 
 
+## 웹 대시보드 (임시 시연용)
+import json
+from fastapi.responses import HTMLResponse
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    with open("templates/dashboard.html", "r", encoding="utf-8") as f:
+        return f.read()
+@app.get("/api/result")
+def get_result():
+    try:
+        with open("data/result.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"error": "분석 결과가 없습니다."}
+
+
 # Spring에서 받는 입력 형태
 class AgentRequest(BaseModel):
     user_id: int
@@ -40,12 +57,11 @@ class ReportResponse(BaseModel):
 
 @app.post("/report/generate")
 def generate_report():
-    # StateGraph 실행
     graph = build_graph()
     result = graph.invoke({
         "user_id": 0,
-        "risk_level": "NEUTRAL",
-        "investment_amount": 0,
+        "risk_level": "AGGRESSIVE",
+        "investment_amount": 10000000,
         "price_data": {},
         "indicators": {},
         "strategy_result": {},
@@ -58,6 +74,8 @@ def generate_report():
         "risk_ok": False,
         "error_log": []
     })
+    # 결과 저장
+    app.state.latest_result = result
     return ReportResponse(
         sentiment_scores=result.get("sentiment_scores", {}),
         portfolio_reason=result.get("portfolio_reason", "")
