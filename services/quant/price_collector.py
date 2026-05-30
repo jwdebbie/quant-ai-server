@@ -1,10 +1,46 @@
 import yfinance as yf
 import pandas as pd
 import os
+import json
+import time
+import requests
 from datetime import datetime
+from dotenv import load_dotenv
 
-TICKERS_OVERSEAS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]
-TICKERS_DOMESTIC = ["005930", "000660", "035420"]  # 삼성전자, SK하이닉스, NAVER
+load_dotenv()
+
+KIS_APP_KEY = os.getenv("KIS_APP_KEY")
+KIS_APP_SECRET = os.getenv("KIS_APP_SECRET")
+
+TICKERS_OVERSEAS = [
+    "AAPL",  "TSLA",  "NVDA",  "MSFT",  "GOOGL",
+    "AMZN",  "META",  "AMD",   "NFLX",  "JPM",
+    "V",     "WMT",   "XOM",   "COIN",  "PLTR",
+    "UBER",  "TSM",   "BABA",  "PYPL",  "INTC",
+]
+
+TICKERS_DOMESTIC = [
+    "005930",  # 삼성전자
+    "000660",  # SK하이닉스
+    "035420",  # NAVER
+    "005380",  # 현대차
+    "000270",  # 기아
+    "068270",  # 셀트리온
+    "051910",  # LG화학
+    "035720",  # 카카오
+    "066570",  # LG전자
+    "373220",  # LG에너지솔루션
+    "207940",  # 삼성바이오로직스
+    "006400",  # 삼성SDI
+    "012330",  # 현대모비스
+    "017670",  # SK텔레콤
+    "030200",  # KT
+    "005490",  # POSCO홀딩스
+    "086790",  # 하나금융지주
+    "105560",  # KB금융
+    "032830",  # 삼성생명
+    "028260",  # 삼성물산
+]
 
 def collect_overseas_prices() -> dict:
     result = {}
@@ -22,8 +58,64 @@ def save_to_csv(price_data: dict):
         df.to_csv(path)
         print(f"{ticker} CSV 저장 완료: {path}")
 
+_TOKEN_CACHE_FILE = ".kis_token.json"
+
+def get_kis_token() -> str:
+    now = datetime.now().timestamp()
+
+    if os.path.exists(_TOKEN_CACHE_FILE):
+        with open(_TOKEN_CACHE_FILE) as f:
+            cached = json.load(f)
+        if cached.get("token") and now < cached.get("expires_at", 0):
+            return cached["token"]
+
+    res = requests.post(
+        "https://openapivts.koreainvestment.com:29443/oauth2/tokenP",
+        json={
+            "appkey": KIS_APP_KEY,
+            "appsecret": KIS_APP_SECRET,
+            "grant_type": "client_credentials"
+        }
+    )
+    data = res.json()
+    if "access_token" not in data:
+        raise RuntimeError(f"KIS 토큰 발급 실패: {data}")
+    token = data["access_token"]
+    with open(_TOKEN_CACHE_FILE, "w") as f:
+        json.dump({"token": token, "expires_at": now + 23 * 3600}, f)
+    return token
+
+def get_domestic_price(token: str, stock_code: str) -> dict:
+    res = requests.get(
+        "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price",
+        headers={
+            "authorization": f"Bearer {token}",
+            "tr_id": "FHKST01010100",
+            "appkey": KIS_APP_KEY,
+            "appsecret": KIS_APP_SECRET
+        },
+        params={
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": stock_code
+        }
+    )
+    return res.json()
+
+def collect_domestic_prices() -> dict:
+    result = {}
+    for code in TICKERS_DOMESTIC:
+        df = yf.download(f"{code}.KS", period="1y", auto_adjust=True)
+        df.columns = df.columns.get_level_values(0)
+        result[code] = df
+        print(f"{code} 수집 완료: {len(df)}개 데이터")
+    return result
+
 if __name__ == "__main__":
-    print("해외 주가 수집 시작...")
+    print("=== 해외 주가 수집 시작 ===")
     price_data = collect_overseas_prices()
     save_to_csv(price_data)
+
+    print("\n=== 국내 주가 수집 시작 ===")
+    domestic_data = collect_domestic_prices()
+    print("\n국내 주가 수집 결과:", {k: len(v) for k, v in domestic_data.items()})
     print("완료!")
