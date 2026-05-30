@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from models.state import AgentState
+from db.database import save_news_articles
 
 load_dotenv()
 
@@ -114,6 +115,13 @@ def collect_news_to_csv():
     os.makedirs("data", exist_ok=True)
     df.to_csv("data/news_articles.csv", index=False, encoding="utf-8-sig")
     print(f"\n총 {len(all_news)}건 저장 완료 → data/news_articles.csv")
+    
+    # DB 저장 추가
+    try:
+        save_news_articles(all_news)
+    except Exception as e:
+        print(f"DB 저장 실패 (CSV는 정상 저장됨): {e}")
+    
     return all_news
 
 if __name__ == "__main__":

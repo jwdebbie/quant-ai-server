@@ -9,6 +9,7 @@ import re
 import time 
 from dotenv import load_dotenv
 from models.state import AgentState
+from db.database import save_news_sentiments
 
 load_dotenv()
 
@@ -72,6 +73,14 @@ def analyze_sentiment_node(state: AgentState) -> dict:
             "count": len(scores)
         }
         print(f"{stock_code} 감성 점수: {avg_score:.2f} ({len(scores)}건)")
+    
+    # DB 저장
+    try:
+        from services.nlp.news_collector import collect_news_node
+        # news_id_map은 state에서 가져와야 해서 일단 빈 dict로
+        save_news_sentiments(avg_scores, {})
+    except Exception as e:
+        print(f"감성 분석 DB 저장 실패: {e}") 
 
     return {"sentiment_scores": avg_scores}
 
