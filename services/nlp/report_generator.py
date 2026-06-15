@@ -11,10 +11,16 @@ load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 STOCK_NAME = {
-    "005930": "삼성전자", "000660": "SK하이닉스", "035420": "NAVER",
-    "005380": "현대차", "000270": "기아",
-    "AAPL": "애플", "TSLA": "테슬라", "NVDA": "엔비디아",
-    "MSFT": "마이크로소프트", "GOOGL": "구글"
+    "005930": "삼성전자",
+    "000660": "SK하이닉스",
+    "402340": "SK스퀘어",
+    "009150": "삼성전기",
+    "005380": "현대차",
+    "373220": "LG에너지솔루션",
+    "032830": "삼성생명",
+    "028260": "삼성물산",
+    "329180": "HD현대중공업",
+    "000270": "기아"
 }
 
 def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:

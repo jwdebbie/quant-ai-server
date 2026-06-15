@@ -3,6 +3,7 @@ from models.state import AgentState
 from services.nlp.news_collector import collect_news_node
 from services.nlp.sentiment import analyze_sentiment_node
 from services.nlp.report_generator import generate_report_node
+from services.portfolio_calculator import portfolio_calc_node
 
 # 희재 노드 import
 from agents.agent1_collect import collect_price_node, calculate_indicators_node
@@ -13,9 +14,8 @@ from agents.agent2_strategy import strategy_node, backtest_node
 # (1) 뉴스 더미 함수 교체 완료
 # (2) 감성 분석 더미 함수 교체 완료
 # (3) 종목 추천 근거 함수 교체 완료
+# (4) 포트폴리오 계산 더미 함수 교체 완료
 
-def portfolio_calc_node(state: AgentState) -> dict:
-    return {"portfolio": {}}
 
 def execute_order_node(state: AgentState) -> dict:
     return {"orders": []}
