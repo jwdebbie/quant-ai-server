@@ -129,7 +129,16 @@ def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy
 다음 종목의 포트폴리오 편입 근거를 2~3문장으로 작성해주세요.
 숫자나 점수는 언급하지 말고 의미만 풀어서 설명해주세요.
 전문 금융 용어는 쓰지 마세요.
-{f"사용자 정보: {user_summary}" if user_summary else ""}
+
+{f'''
+사용자 정보: {user_summary}
+위 사용자 정보를 자연스럽게 녹여서 설명해주세요.
+"~~한 분께" 같은 형식적인 표현은 쓰지 마세요.
+대신 사용자의 투자 목표, 기간, 성향이
+이 종목과 왜 잘 맞는지 자연스럽게 연결해서 설명해주세요.
+예) "장기적으로 안정적인 수익을 원한다면 이 종목의 꾸준한 성장세가 도움이 될 수 있습니다."
+    "단기간에 높은 수익을 노린다면 지금의 강한 상승 흐름이 기회가 될 수 있습니다."
+''' if user_summary else ""}
 
 종목: {name}({stock_code})
 뉴스 분위기: {"긍정적" if sentiment > 0.3 else "부정적" if sentiment < 0 else "중립적"}
