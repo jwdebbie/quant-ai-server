@@ -2,6 +2,10 @@
 # 사용자 성향별 비중 계산 + 종목별 매수 금액 · 수량 산출
 
 from models.state import AgentState
+from google import genai
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # 투자 기간 한글 변환
 PERIOD_MAP = {
@@ -60,6 +64,7 @@ def calculate_weights(ranked_stocks: list, sentiment_scores: dict, profile_type:
     return weights
 
 
+
 def calculate_portfolio(state: AgentState) -> dict:
     """포트폴리오 비중 + 매수 금액 · 수량 산출"""
 
@@ -101,8 +106,62 @@ def calculate_portfolio(state: AgentState) -> dict:
     return portfolio
 
 
+    
+def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy_result: dict, user_info: dict = {}) -> dict:
+    """Gemini API로 종목별 추천 근거 생성"""
+    
+    momentum_scores = strategy_result.get("momentum_scores", {})
+    
+    # 사용자 정보 요약
+    user_summary = ""
+    if user_info:
+        goal = user_info.get("investmentGoal", "")
+        period = PERIOD_MAP.get(user_info.get("investmentPeriod", ""), "")
+        profile = user_info.get("profileType", "")
+        user_summary = f"투자 목표: {goal}, 투자 기간: {period}, 투자 성향: {profile}"
+
+    for stock_code in portfolio:
+        name = STOCK_NAME.get(stock_code, stock_code)
+        sentiment = sentiment_scores.get(stock_code, {}).get("score", 0)
+        momentum = momentum_scores.get(stock_code, 0)
+
+        prompt = f"""
+다음 종목의 포트폴리오 편입 근거를 2~3문장으로 작성해주세요.
+숫자나 점수는 언급하지 말고 의미만 풀어서 설명해주세요.
+전문 금융 용어는 쓰지 마세요.
+{f"사용자 정보: {user_summary}" if user_summary else ""}
+
+종목: {name}({stock_code})
+뉴스 분위기: {"긍정적" if sentiment > 0.3 else "부정적" if sentiment < 0 else "중립적"}
+주가 상승 힘: {"강함" if momentum > 2 else "약함" if momentum < 0 else "보통"}
+"""
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents=prompt
+        )
+        portfolio[stock_code]["reason"] = response.text.strip()
+
+    return portfolio
+
+
 def portfolio_calc_node(state: AgentState) -> dict:
     portfolio = calculate_portfolio(state)
+    
+    # 추천 근거 생성
+    user_info = {
+        "investmentGoal": state.get("investment_goal", ""),
+        "investmentPeriod": state.get("investment_period", ""),
+        "profileType": state.get("risk_level", "")
+    }
+    
+    portfolio = generate_portfolio_reasons(
+        portfolio,
+        state.get("sentiment_scores", {}),
+        state.get("strategy_result", {}),
+        user_info
+    )
+    
     return {"portfolio": portfolio}
 
 
