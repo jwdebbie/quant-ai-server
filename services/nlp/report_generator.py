@@ -23,14 +23,6 @@ STOCK_NAME = {
     "000270": "기아"
 }
 
-# 투자 기간 한글 변환
-PERIOD_MAP = {
-    "UNDER_1Y": "1년 미만",
-    "1Y_TO_3Y": "1년~3년",
-    "3Y_TO_5Y": "3년~5년",
-    "OVER_5Y": "5년 이상"
-}
-
 def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
     sentiment_summary = ""
     for stock_code, data in sentiment_scores.items():
@@ -107,7 +99,7 @@ def generate_report_node(state: AgentState) -> dict:
     print("리포트 생성 완료!")
     print(report)
 
-    return {"portfolio_reason": report}
+    return {"portfolio_reason": report}  
 
 
 if __name__ == "__main__":
