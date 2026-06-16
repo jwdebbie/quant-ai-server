@@ -29,24 +29,32 @@ STOCK_NAME = {
     "000270": "기아"
 }
 
-def calculate_weights(ranked_stocks: list, sentiment_scores: dict, profile_type: str) -> dict:
-    """사용자 성향별 종목 비중 계산"""
+def calculate_weights(ranked_stocks: list, sentiment_scores: dict, profile_type: str, risk_tolerance: int = 3, investment_period: str = "") -> dict:
 
     weights = {}
 
-    if profile_type == "AGGRESSIVE":
-        # 모멘텀 상위 종목 위주 (상위 5개에 집중)
-        top_stocks = ranked_stocks[:5]
-        remaining = ranked_stocks[5:]
-        for i, stock in enumerate(top_stocks):
-            weights[stock] = 0.12  # 상위 5개 각 12%
-        for stock in remaining:
-            weights[stock] = 0.04  # 나머지 각 4%
+    # 감성 점수 낮은 종목 필터링 (리스크 허용도 낮을 때)
+    filtered_stocks = ranked_stocks
+    if risk_tolerance <= 2:
+        filtered_stocks = [s for s in ranked_stocks
+                          if sentiment_scores.get(s, {}).get("score", 0) >= 0]
 
-    elif profile_type == "STABLE":
-        # 감성 점수 좋고 변동성 낮은 종목 위주
+    if profile_type == "AGGRESSIVE" or investment_period == "OVER_5Y":
+        # 모멘텀 상위 종목 더 집중
+        top_stocks = filtered_stocks[:3]
+        mid_stocks = filtered_stocks[3:6]
+        remaining = filtered_stocks[6:]
+        for stock in top_stocks:
+            weights[stock] = 0.20
+        for stock in mid_stocks:
+            weights[stock] = 0.07
+        for stock in remaining:
+            weights[stock] = 0.03
+
+    elif profile_type == "STABLE" or investment_period == "UNDER_1Y":
+        # 감성 좋고 안정적인 종목 위주
         sorted_by_sentiment = sorted(
-            sentiment_scores.keys(),
+            filtered_stocks,
             key=lambda x: sentiment_scores.get(x, {}).get("score", 0),
             reverse=True
         )
@@ -57,27 +65,33 @@ def calculate_weights(ranked_stocks: list, sentiment_scores: dict, profile_type:
                 weights[stock] = 0.04
 
     else:  # NEUTRAL
-        # 균등 배분
-        for stock in ranked_stocks:
-            weights[stock] = 0.10
+        for stock in filtered_stocks:
+            weights[stock] = round(1.0 / len(filtered_stocks), 2)
 
     return weights
 
 
 
 def calculate_portfolio(state: AgentState) -> dict:
-    """포트폴리오 비중 + 매수 금액 · 수량 산출"""
 
     strategy_result = state.get("strategy_result", {})
     sentiment_scores = state.get("sentiment_scores", {})
     profile_type = state.get("risk_level", "NEUTRAL")
     investment_amount = state.get("investment_amount", 10000000)
     price_data = state.get("price_data", {})
+    risk_tolerance = state.get("risk_tolerance", 3)        
+    investment_period = state.get("investment_period", "") 
 
     ranked_stocks = strategy_result.get("ranked_stocks", list(STOCK_NAME.keys()))
 
     # 비중 계산
-    weights = calculate_weights(ranked_stocks, sentiment_scores, profile_type)
+    weights = calculate_weights(
+        ranked_stocks,
+        sentiment_scores,
+        profile_type,
+        risk_tolerance,    
+        investment_period  
+    )
 
     # 종목별 금액 · 수량 산출
     portfolio = {}

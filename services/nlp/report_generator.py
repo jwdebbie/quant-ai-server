@@ -31,7 +31,7 @@ PERIOD_MAP = {
     "OVER_5Y": "5년 이상"
 }
 
-def generate_report(sentiment_scores: dict, strategy_result: dict, user_info: dict = {}) -> str:
+def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
     sentiment_summary = ""
     for stock_code, data in sentiment_scores.items():
         score = data.get("score", 0)
@@ -48,35 +48,12 @@ def generate_report(sentiment_scores: dict, strategy_result: dict, user_info: di
             name = STOCK_NAME.get(stock, stock)
             strategy_summary += f"- {name}({stock}): 모멘텀 점수 {score:.2f}\n"
 
-    # 사용자 정보 요약
-    user_summary = ""
-    if user_info:
-        goal = user_info.get("investmentGoal", "")
-        risk = user_info.get("riskTolerance", "")
-        period = PERIOD_MAP.get(user_info.get("investmentPeriod", ""), "")
-        profile = user_info.get("profileType", "")
-        user_summary = f"""
-[사용자 투자 성향]
-- 투자 목표: {goal}
-- 리스크 수용 정도: {risk}점 (1~5점 기준)
-- 투자 기간: {period}
-- 투자 성향: {profile}
-"""
-
     prompt = f"""
 당신은 주식 초보자도 이해할 수 있게 설명해주는 친절한 투자 어시스턴트입니다.
 아래 데이터만 바탕으로 오늘의 시장 리포트를 작성하세요.
 데이터 외 배경지식은 사용하지 마세요.
 이모지는 사용하지 마세요.
 종목명과 코드를 함께 표기해주세요. 예) 삼성전자(005930)
-{f"""
-리포트 맨 앞에 한 줄로 사용자 성향을 소개하는 문장을 써주세요.
-예) "안정적인 수익을 목표로 1~3년 장기 투자를 계획하시는 분께"
-이 문장은 1번 항목 앞에 별도로 써주세요.
-1번 한줄 요약에는 성향 소개 없이 시장 상황만 써주세요.
-
-{user_summary}
-""" if user_info else ""}
 
 주의사항 작성 시
 - "감성 점수가 낮다" → "최근 부정적인 뉴스가 많다"
@@ -88,8 +65,6 @@ def generate_report(sentiment_scores: dict, strategy_result: dict, user_info: di
 - "신중한 접근이 필요하다" → "지금 당장 사기보다 조금 더 지켜보는 것이 좋을 수 있다"
 - 숫자나 지표 용어는 절대 사용하지 마세요.
 - 전문 금융 용어도 쓰지 마세요.
-
-{user_summary}
 
 [종목별 뉴스 감성 점수]
 {sentiment_summary}
@@ -127,16 +102,8 @@ def generate_report_node(state: AgentState) -> dict:
     sentiment_scores = state.get("sentiment_scores", {})
     strategy_result = state.get("strategy_result", {})
 
-    # 사용자 정보 가져오기
-    user_info = {
-        "investmentGoal": state.get("investment_goal", ""),
-        "riskTolerance": state.get("risk_tolerance", ""),
-        "investmentPeriod": state.get("investment_period", ""),
-        "profileType": state.get("risk_level", "")
-    }
-
     print("시장 리포트 생성 중...")
-    report = generate_report(sentiment_scores, strategy_result, user_info)
+    report = generate_report(sentiment_scores, strategy_result)
     print("리포트 생성 완료!")
     print(report)
 
