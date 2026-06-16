@@ -12,13 +12,18 @@ load_dotenv()
 KIS_APP_KEY = os.getenv("KIS_APP_KEY")
 KIS_APP_SECRET = os.getenv("KIS_APP_SECRET")
 
-TICKERS_OVERSEAS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL"]
+TICKERS_OVERSEAS = []
 
 TICKERS_DOMESTIC = [
     "005930",  # 삼성전자
     "000660",  # SK하이닉스
-    "035420",  # NAVER
+    "402340",  # SK스퀘어
+    "009150",  # 삼성전기
     "005380",  # 현대차
+    "373220",  # LG에너지솔루션
+    "032830",  # 삼성생명
+    "028260",  # 삼성물산
+    "329180",  # HD현대중공업
     "000270",  # 기아
 ]
 
