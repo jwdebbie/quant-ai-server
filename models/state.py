@@ -7,9 +7,12 @@ class AgentState(TypedDict):
     """
 
     # ── 입력값 (현정 → Python 서버로 전달) ──────────────────
-    user_id:           int    # 사용자 ID
-    risk_level:        str    # AGGRESSIVE / NEUTRAL / CONSERVATIVE
-    investment_amount: int    # 투자 가능 금액 (원)
+    user_id:           int
+    risk_level:        str    # AGGRESSIVE / NEUTRAL / STABLE
+    investment_amount: int
+    investment_goal:   str    # 투자 목표
+    risk_tolerance:    int    # 리스크 허용도 (1~5)
+    investment_period: str    # UNDER_1Y / 1Y_TO_3Y / 3Y_TO_5Y / OVER_5Y
 
     # ── 희재 담당 (주가 수집 · 지표 계산 · 전략 · 백테스트) ──
     price_data:        dict   # {stock_code: OHLCV DataFrame}
