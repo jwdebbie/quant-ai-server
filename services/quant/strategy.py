@@ -1,38 +1,48 @@
 import pandas as pd
 
 
-def score_stock(code: str, ind: dict) -> float:
-    score = 0.0
+def calculate_momentum_score(close: pd.Series) -> float:
+    n = len(close)
+    curr = float(close.iloc[-1])
 
-    # RSI: 30~70 사이면 정상, 50 초과면 상승 모멘텀
-    rsi = float(ind["RSI"].iloc[-1])
-    if 30 < rsi < 70:
-        score += (rsi - 50) / 20  # -1.0 ~ +1.0
+    # 3개월(63거래일) · 6개월(126거래일) · 12개월(252거래일) 수익률
+    ret_3m  = (curr / float(close.iloc[-63])  - 1) if n >= 63  else 0.0
+    ret_6m  = (curr / float(close.iloc[-126]) - 1) if n >= 126 else 0.0
+    ret_12m = (curr / float(close.iloc[-252]) - 1) if n >= 252 else 0.0
 
-    # MACD 히스토그램 양수 = 상승 신호
-    macd_hist = float(ind["MACD_hist"].iloc[-1])
-    score += 1.0 if macd_hist > 0 else -1.0
-
-    # 종가가 MA20 위 = 상승 추세
-    close = float(ind["MA5"].iloc[-1])   # MA5 ≈ 현재가 근사
-    ma20  = float(ind["MA20"].iloc[-1])
-    score += 1.0 if close > ma20 else -1.0
-
-    # 종가가 MA60 위 = 장기 상승 추세
-    ma60 = float(ind["MA60"].iloc[-1])
-    score += 0.5 if close > ma60 else -0.5
-
-    # 거래량 급등 = 관심 증가
-    volume_spike = bool(ind["volume_spike"].iloc[-1])
-    score += 0.5 if volume_spike else 0.0
-
-    return round(score, 4)
+    return round(ret_3m * 0.5 + ret_6m * 0.3 + ret_12m * 0.2, 4)
 
 
-def rank_stocks(indicators: dict) -> dict:
-    scores = {code: score_stock(code, ind) for code, ind in indicators.items()}
+def rank_stocks(price_data: dict) -> dict:
+    scores = {}
+    for code, df in price_data.items():
+        if df.empty or "Close" not in df.columns:
+            continue
+        scores[code] = calculate_momentum_score(df["Close"])
+
     ranked = sorted(scores, key=lambda c: scores[c], reverse=True)
     return {
         "ranked_stocks":   ranked,
         "momentum_scores": scores,
     }
+
+
+if __name__ == "__main__":
+    from services.quant.price_collector import collect_domestic_prices
+
+    print("=== 5주차 모멘텀 전략 단독 테스트 ===\n")
+    price_data = collect_domestic_prices()
+    result = rank_stocks(price_data)
+
+    ranked = result["ranked_stocks"]
+    scores = result["momentum_scores"]
+
+    print(f"{'순위':<5} {'종목':<12} {'점수':>10}  {'신호'}")
+    print("-" * 40)
+    for i, code in enumerate(ranked, 1):
+        s = scores[code]
+        bar = ("+" * int(s * 10)) if s >= 0 else ("-" * int(abs(s) * 10))
+        tag = "  << 매수" if i <= 3 else ""
+        print(f"{i:<5} {code:<12} {s:>10.4f}  {bar}{tag}")
+
+    print(f"\n상위 3종목: {ranked[:3]}")
