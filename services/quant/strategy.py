@@ -1,6 +1,9 @@
 import pandas as pd
 
 
+MAX_RETURN = 5.0  # 500% 초과 수익률은 데이터 이상으로 처리
+
+
 def calculate_momentum_score(close: pd.Series) -> float:
     n = len(close)
     curr = float(close.iloc[-1])
@@ -9,6 +12,11 @@ def calculate_momentum_score(close: pd.Series) -> float:
     ret_3m  = (curr / float(close.iloc[-63])  - 1) if n >= 63  else 0.0
     ret_6m  = (curr / float(close.iloc[-126]) - 1) if n >= 126 else 0.0
     ret_12m = (curr / float(close.iloc[-252]) - 1) if n >= 252 else 0.0
+
+    # 비정상 수익률 감지 (yfinance 데이터 오류 방어)
+    if any(abs(r) > MAX_RETURN for r in [ret_3m, ret_6m, ret_12m]):
+        print(f"  [경고] 비정상 수익률 감지 → 점수 0 처리 (3M:{ret_3m:.1%} 6M:{ret_6m:.1%} 12M:{ret_12m:.1%})")
+        return 0.0
 
     return round(ret_3m * 0.5 + ret_6m * 0.3 + ret_12m * 0.2, 4)
 
