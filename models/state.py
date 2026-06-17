@@ -25,7 +25,7 @@ class AgentState(TypedDict):
     news_articles:     list   # [{title, content, stock_code, published_at}]
     sentiment_scores:  dict   # {stock_code: {score: float, reason: str}}
     portfolio:         dict   # {stocks: list, expected_return: float, mdd: float, sharpe: float}
-    portfolio_reason:  str    # 포트폴리오 추천 근거 설명 (Claude 생성)
+    report:            str    
 
     # ── 현정 담당 (리스크 안전장치) ─────────────────────────
     risk_ok:           bool   # True면 주문 실행 / False면 차단

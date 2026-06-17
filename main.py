@@ -54,7 +54,7 @@ def run_agent(request: AgentRequest):
     return PortfolioResponse(
         portfolio=result.get("portfolio", {}),
         backtest_result=result.get("backtest_result", {}),
-        report=result.get("portfolio_reason", ""),
+        report=result.get("report", ""),
         risk_type=request.profileType
     )
 
@@ -82,5 +82,5 @@ def generate_report():
     })
     return ReportResponse(
         sentiment_scores=result.get("sentiment_scores", {}),
-        report=result.get("portfolio_reason", "")
+        report=result.get("report", "")
     )

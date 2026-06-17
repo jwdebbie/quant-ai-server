@@ -69,16 +69,15 @@ def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
 1. 오늘 시장 한줄 요약
    누구나 이해할 수 있는 쉬운 문장으로 작성
 
-2. 주목할 종목
+2. 종목별 오늘 뉴스 흐름
    각 종목마다 아래 내용을 포함해서 설명
    - 종목명(코드) 반드시 표기
-   - 최근 뉴스 분위기가 어떤지
-   - 주가가 지금 오르는 힘이 얼마나 강한지
-   - 왜 주목해야 하는지
-   점수 숫자는 직접 언급하지 말고 의미만 풀어서 설명
+   - 오늘 어떤 소식이 있었는지
+   - 뉴스 분위기가 긍정적인지 부정적인지
+   숫자나 지표 용어는 쓰지 마세요
 
-3. 오늘 투자 시 주의할 점
-   오늘 데이터에서 발견된 구체적인 주의사항만 간결하게 작성
+3. 오늘 시장에서 조심할 점
+   오늘 뉴스에서 발견된 구체적인 주의사항만 간결하게 작성
    일반적인 투자 조언은 쓰지 마세요
 """
 
@@ -99,7 +98,7 @@ def generate_report_node(state: AgentState) -> dict:
     print("리포트 생성 완료!")
     print(report)
 
-    return {"portfolio_reason": report}  
+    return {"report": report}  
 
 
 if __name__ == "__main__":

@@ -32,41 +32,39 @@ STOCK_NAME = {
 def calculate_weights(ranked_stocks: list, sentiment_scores: dict, profile_type: str, risk_tolerance: int = 3, investment_period: str = "") -> dict:
 
     weights = {}
-
-    # 감성 점수 낮은 종목 필터링 (리스크 허용도 낮을 때)
-    filtered_stocks = ranked_stocks
-    if risk_tolerance <= 2:
-        filtered_stocks = [s for s in ranked_stocks
-                          if sentiment_scores.get(s, {}).get("score", 0) >= 0]
+    total = len(ranked_stocks)
 
     if profile_type == "AGGRESSIVE" or investment_period == "OVER_5Y":
-        # 모멘텀 상위 종목 더 집중
-        top_stocks = filtered_stocks[:3]
-        mid_stocks = filtered_stocks[3:6]
-        remaining = filtered_stocks[6:]
-        for stock in top_stocks:
-            weights[stock] = 0.20
-        for stock in mid_stocks:
-            weights[stock] = 0.07
-        for stock in remaining:
-            weights[stock] = 0.03
+        top_count = max(1, total // 3)
+        mid_count = max(1, total // 3)
+        remaining_count = total - top_count - mid_count
+
+        for i, stock in enumerate(ranked_stocks):
+            if i < top_count:
+                weights[stock] = round(0.6 / top_count, 4)
+            elif i < top_count + mid_count:
+                weights[stock] = round(0.3 / mid_count, 4)
+            else:
+                weights[stock] = round(0.1 / remaining_count, 4) if remaining_count > 0 else 0
 
     elif profile_type == "STABLE" or investment_period == "UNDER_1Y":
-        # 감성 좋고 안정적인 종목 위주
         sorted_by_sentiment = sorted(
-            filtered_stocks,
+            ranked_stocks,
             key=lambda x: sentiment_scores.get(x, {}).get("score", 0),
             reverse=True
         )
+        top_count = max(1, total // 2)
+        remaining_count = total - top_count
+
         for i, stock in enumerate(sorted_by_sentiment):
-            if i < 5:
-                weights[stock] = 0.12
+            if i < top_count:
+                weights[stock] = round(0.7 / top_count, 4)
             else:
-                weights[stock] = 0.04
+                weights[stock] = round(0.3 / remaining_count, 4) if remaining_count > 0 else 0
 
     else:  # NEUTRAL
-        for stock in filtered_stocks:
-            weights[stock] = round(1.0 / len(filtered_stocks), 2)
+        for stock in ranked_stocks:
+            weights[stock] = round(1.0 / total, 4)
 
     return weights
 
@@ -132,7 +130,9 @@ def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy
         goal = user_info.get("investmentGoal", "")
         period = PERIOD_MAP.get(user_info.get("investmentPeriod", ""), "")
         profile = user_info.get("profileType", "")
-        user_summary = f"투자 목표: {goal}, 투자 기간: {period}, 투자 성향: {profile}"
+        risk = user_info.get("riskTolerance", 3)
+        risk_text = "낮은 편" if risk <= 2 else "높은 편" if risk >= 4 else "보통"
+        user_summary = f"투자 목표: {goal}, 투자 기간: {period}, 투자 성향: {profile}, 리스크 허용도: {risk_text}"
 
     for stock_code in portfolio:
         name = STOCK_NAME.get(stock_code, stock_code)
@@ -140,7 +140,7 @@ def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy
         momentum = momentum_scores.get(stock_code, 0)
 
         prompt = f"""
-다음 종목의 포트폴리오 편입 근거를 2~3문장으로 작성해주세요.
+다음 종목의 포트폴리오 편입 근거를 아래 형식으로 작성해주세요.
 숫자나 점수는 언급하지 말고 의미만 풀어서 설명해주세요.
 전문 금융 용어는 쓰지 마세요.
 
@@ -148,15 +148,18 @@ def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy
 사용자 정보: {user_summary}
 위 사용자 정보를 자연스럽게 녹여서 설명해주세요.
 "~~한 분께" 같은 형식적인 표현은 쓰지 마세요.
-대신 사용자의 투자 목표, 기간, 성향이
+사용자의 투자 목표, 기간, 성향이
 이 종목과 왜 잘 맞는지 자연스럽게 연결해서 설명해주세요.
-예) "장기적으로 안정적인 수익을 원한다면 이 종목의 꾸준한 성장세가 도움이 될 수 있습니다."
-    "단기간에 높은 수익을 노린다면 지금의 강한 상승 흐름이 기회가 될 수 있습니다."
 ''' if user_summary else ""}
 
 종목: {name}({stock_code})
 뉴스 분위기: {"긍정적" if sentiment > 0.3 else "부정적" if sentiment < 0 else "중립적"}
 주가 상승 힘: {"강함" if momentum > 2 else "약함" if momentum < 0 else "보통"}
+
+형식:
+- 최근 뉴스 분위기와 주가 흐름을 바탕으로 이 종목을 주목해야 하는 이유
+- 이 사용자의 투자 성향과 어떻게 잘 맞는지
+- 투자 시 고려할 점
 """
         client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         response = client.models.generate_content(
@@ -189,20 +192,27 @@ def portfolio_calc_node(state: AgentState) -> dict:
 
 
 if __name__ == "__main__":
-    # 더미 테스트
-    dummy_state = {
-        "risk_level": "AGGRESSIVE",
-        "investment_amount": 10000000,
-        "strategy_result": {
-            "ranked_stocks": ["005930", "000660", "009150", "005380", "373220",
-                            "402340", "032830", "028260", "329180", "000270"],
-            "momentum_scores": {}
-        },
-        "sentiment_scores": {
-            "005930": {"score": 0.5},
-            "000660": {"score": 0.6},
-        },
-        "price_data": {}
+    ranked = ["402340", "000660", "032830", "005930", "028260",
+              "005380", "329180", "000270", "373220", "207940"]
+    sentiment = {
+        "005930": {"score": 0.26}, "000660": {"score": 0.23},
+        "402340": {"score": 0.38}, "207940": {"score": 0.52},
+        "005380": {"score": 0.31}, "373220": {"score": 0.24},
+        "032830": {"score": 0.02}, "028260": {"score": 0.13},
+        "329180": {"score": 0.38}, "000270": {"score": 0.13}
     }
-    result = portfolio_calc_node(dummy_state)
-    print(result)
+
+    print("=== AGGRESSIVE + OVER_5Y ===")
+    w1 = calculate_weights(ranked, sentiment, "AGGRESSIVE", 5, "OVER_5Y")
+    for k, v in w1.items():
+        print(f"{STOCK_NAME.get(k, k)}: {v}")
+
+    print("\n=== NEUTRAL + UNDER_1Y ===")
+    w2 = calculate_weights(ranked, sentiment, "NEUTRAL", 5, "UNDER_1Y")
+    for k, v in w2.items():
+        print(f"{STOCK_NAME.get(k, k)}: {v}")
+
+    print("\n=== STABLE + risk_tolerance 2 ===")
+    w3 = calculate_weights(ranked, sentiment, "STABLE", 2, "1Y_TO_3Y")
+    for k, v in w3.items():
+        print(f"{STOCK_NAME.get(k, k)}: {v}")
