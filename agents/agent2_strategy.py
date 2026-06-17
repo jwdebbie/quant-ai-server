@@ -5,7 +5,7 @@ from services.quant.backtest import run_backtest
 
 def strategy_node(state: AgentState) -> dict:
     print("전략 수립 시작...")
-    result = rank_stocks(state["indicators"])
+    result = rank_stocks(state["price_data"])
     print(f"랭킹: {result['ranked_stocks']}")
     print(f"점수: {result['momentum_scores']}")
     return {"strategy_result": result}
