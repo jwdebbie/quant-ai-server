@@ -57,8 +57,9 @@ if __name__ == "__main__":
         "user_id": 1,
         "risk_level": "STABLE",
         "risk_tolerance": 2,
-        "investment_period": "1Y_TO_3Y",
+        "investment_period": "OVER_5Y",
         "investment_goal": "안정적 수익",
+        "investment_amount": 10000000,
         "price_data": {},
         "indicators": {},
         "strategy_result": {},
@@ -71,4 +72,16 @@ if __name__ == "__main__":
         "risk_ok": False,
         "error_log": []
     })
-    print(result)
+
+    print("\n" + "="*50)
+    print("리포트")
+    print("="*50)
+    print(result.get("report", ""))
+
+    print("\n" + "="*50)
+    print("포트폴리오")
+    print("="*50)
+    for code, data in result.get("portfolio", {}).items():
+        print(f"\n{data['name']}({code}) - {data['weight']*100:.1f}%")
+        print(f"금액: {data['amount']:,}원")
+        print(f"추천 근거: {data['reason'][:100]}...")
