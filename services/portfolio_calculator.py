@@ -140,26 +140,22 @@ def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy
         momentum = momentum_scores.get(stock_code, 0)
 
         prompt = f"""
-다음 종목의 포트폴리오 편입 근거를 아래 형식으로 작성해주세요.
+다음 종목을 이 사용자에게 추천하는 이유를 자연스러운 문장으로 2~3문장 작성해주세요.
+번호나 소제목 없이 줄글로 이어서 써주세요.
 숫자나 점수는 언급하지 말고 의미만 풀어서 설명해주세요.
 전문 금융 용어는 쓰지 마세요.
 
-{f'''
 사용자 정보: {user_summary}
-위 사용자 정보를 자연스럽게 녹여서 설명해주세요.
-"~~한 분께" 같은 형식적인 표현은 쓰지 마세요.
-사용자의 투자 목표, 기간, 성향이
-이 종목과 왜 잘 맞는지 자연스럽게 연결해서 설명해주세요.
-''' if user_summary else ""}
 
 종목: {name}({stock_code})
 뉴스 분위기: {"긍정적" if sentiment > 0.3 else "부정적" if sentiment < 0 else "중립적"}
 주가 상승 힘: {"강함" if momentum > 2 else "약함" if momentum < 0 else "보통"}
 
-형식:
-- 최근 뉴스 분위기와 주가 흐름을 바탕으로 이 종목을 주목해야 하는 이유
-- 이 사용자의 투자 성향과 어떻게 잘 맞는지
-- 투자 시 고려할 점
+종목 자체에 대한 일반적인 설명은 한두 문장으로 짧게만 언급하고,
+이 사용자의 투자 목표, 투자 기간, 리스크 허용도를 중심으로
+"왜 이 사용자에게 이 종목이 필요한지"를 더 자세히 설명해주세요.
+예) "5년이라는 시간을 갖고 있다면 지금의 잠시 주춤한 흐름이 오히려 매수 기회가 될 수 있다"
+    "단기간에 성과를 보고 싶은 만큼 지금의 강한 상승 흐름이 기회가 될 수 있다"
 """
         client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         response = client.models.generate_content(
@@ -192,27 +188,17 @@ def portfolio_calc_node(state: AgentState) -> dict:
 
 
 if __name__ == "__main__":
-    ranked = ["402340", "000660", "032830", "005930", "028260",
-              "005380", "329180", "000270", "373220", "207940"]
-    sentiment = {
-        "005930": {"score": 0.26}, "000660": {"score": 0.23},
-        "402340": {"score": 0.38}, "207940": {"score": 0.52},
-        "005380": {"score": 0.31}, "373220": {"score": 0.24},
-        "032830": {"score": 0.02}, "028260": {"score": 0.13},
-        "329180": {"score": 0.38}, "000270": {"score": 0.13}
+    dummy_portfolio = {
+        "402340": {"name": "SK스퀘어", "weight": 0.2, "amount": 2000000, "quantity": 0, "reason": ""},
+    }
+    dummy_sentiment = {"402340": {"score": 0.38}}
+    dummy_strategy = {"momentum_scores": {"402340": 2.08}}
+    dummy_user_info = {
+        "investmentGoal": "안정적 수익",
+        "investmentPeriod": "OVER_5Y",
+        "profileType": "STABLE",
+        "riskTolerance": 2
     }
 
-    print("=== AGGRESSIVE + OVER_5Y ===")
-    w1 = calculate_weights(ranked, sentiment, "AGGRESSIVE", 5, "OVER_5Y")
-    for k, v in w1.items():
-        print(f"{STOCK_NAME.get(k, k)}: {v}")
-
-    print("\n=== NEUTRAL + UNDER_1Y ===")
-    w2 = calculate_weights(ranked, sentiment, "NEUTRAL", 5, "UNDER_1Y")
-    for k, v in w2.items():
-        print(f"{STOCK_NAME.get(k, k)}: {v}")
-
-    print("\n=== STABLE + risk_tolerance 2 ===")
-    w3 = calculate_weights(ranked, sentiment, "STABLE", 2, "1Y_TO_3Y")
-    for k, v in w3.items():
-        print(f"{STOCK_NAME.get(k, k)}: {v}")
+    result = generate_portfolio_reasons(dummy_portfolio, dummy_sentiment, dummy_strategy, dummy_user_info)
+    print(result["402340"]["reason"])

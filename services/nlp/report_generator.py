@@ -24,7 +24,7 @@ STOCK_NAME = {
     "000270": "기아"
 }
 
-def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
+def generate_report(sentiment_scores: dict, strategy_result: dict, news_articles: list = []) -> str:
     sentiment_summary = ""
     for stock_code, data in sentiment_scores.items():
         score = data.get("score", 0)
@@ -40,6 +40,15 @@ def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
             score = scores.get(stock, 0)
             name = STOCK_NAME.get(stock, stock)
             strategy_summary += f"- {name}({stock}): 모멘텀 점수 {score:.2f}\n"
+
+    news_summary = ""
+    for stock_code in STOCK_NAME:
+        titles = [a["title"] for a in news_articles if a.get("stock_code") == stock_code][:3]
+        if titles:
+            name = STOCK_NAME.get(stock_code, stock_code)
+            news_summary += f"\n[{name}({stock_code}) 관련 뉴스]\n"
+            for t in titles:
+                news_summary += f"- {t}\n"
 
     prompt = f"""
 당신은 주식 초보자도 이해할 수 있게 설명해주는 친절한 투자 어시스턴트입니다.
@@ -62,6 +71,9 @@ def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
 [종목별 뉴스 감성 점수]
 {sentiment_summary}
 
+[종목별 실제 뉴스 제목]
+{news_summary}
+
 [모멘텀 전략 상위 종목]
 {strategy_summary}
 
@@ -73,9 +85,9 @@ def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
 2. 종목별 오늘 뉴스 흐름
    각 종목마다 아래 내용을 포함해서 설명
    - 종목명(코드) 반드시 표기
-   - 오늘 어떤 소식이 있었는지
-   - 뉴스 분위기가 긍정적인지 부정적인지
-   숫자나 지표 용어는 쓰지 마세요
+   - 실제 뉴스 제목을 참고해서 오늘 무슨 일이 있었는지 구체적으로 설명
+   - 그 소식이 왜 긍정적인지 또는 부정적인지 이유 포함
+   같은 표현을 반복하지 말고 다양하게 작성해주세요.
 
 3. 오늘 시장에서 조심할 점
    오늘 뉴스에서 발견된 구체적인 주의사항만 간결하게 작성
@@ -93,25 +105,25 @@ def generate_report(sentiment_scores: dict, strategy_result: dict) -> str:
 def generate_report_node(state: AgentState) -> dict:
     sentiment_scores = state.get("sentiment_scores", {})
     strategy_result = state.get("strategy_result", {})
+    news_articles = state.get("news_articles", []) 
 
     print("시장 리포트 생성 중...")
-    report = generate_report(sentiment_scores, strategy_result)
+    report = generate_report(sentiment_scores, strategy_result, news_articles)  # 여기도 news_articles 추가
     print("리포트 생성 완료!")
     print(report)
 
-    return {"report": report}  
+    return {"report": report}
 
 
 if __name__ == "__main__":
     dummy_state = {
         "sentiment_scores": {
-            "005930": {"score": 0.12, "count": 10},
-            "000660": {"score": 0.32, "count": 10},
-            "035420": {"score": 0.13, "count": 10},
-            "005380": {"score": 0.50, "count": 10},
-            "000270": {"score": 0.30, "count": 10}
+            "005930": {"score": 0.44, "count": 5},
         },
-        "strategy_result": {}
+        "strategy_result": {},
+        "news_articles": [
+            {"stock_code": "005930", "title": "삼성전자 반도체 수요 회복 기대감 확산"},
+            {"stock_code": "005930", "title": "삼성전자, 신규 AI 칩 공급 계약 체결"},
+        ]
     }
     result = generate_report_node(dummy_state)
-    print(result)

@@ -55,9 +55,9 @@ if __name__ == "__main__":
     app = build_graph()
     result = app.invoke({
         "user_id": 1,
-        "risk_level": "STABLE",
-        "risk_tolerance": 2,
-        "investment_period": "OVER_5Y",
+        "risk_level": "AGGRESSIVE",
+        "risk_tolerance": 5,
+        "investment_period": "UNDER_1Y",
         "investment_goal": "안정적 수익",
         "investment_amount": 10000000,
         "price_data": {},

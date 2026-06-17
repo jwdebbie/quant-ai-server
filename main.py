@@ -29,7 +29,7 @@ class ReportResponse(BaseModel):
 def health_check():
     return {"status": "ok", "message": "Quant AI Server Running"}
 
-@app.post("/agent/run")
+@app.post("/api/portfolio/recommend")
 def run_agent(request: AgentRequest):
     graph = build_graph()
     result = graph.invoke({
