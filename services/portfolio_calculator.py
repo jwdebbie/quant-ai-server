@@ -7,6 +7,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+import time
+
 # 투자 기간 한글 변환
 PERIOD_MAP = {
     "UNDER_1Y": "1년 미만",
@@ -120,19 +122,14 @@ def calculate_portfolio(state: AgentState) -> dict:
 
     
 def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy_result: dict, user_info: dict = {}) -> dict:
-    """Gemini API로 종목별 추천 근거 생성"""
-    
     momentum_scores = strategy_result.get("momentum_scores", {})
-    
-    # 사용자 정보 요약
+
     user_summary = ""
     if user_info:
         goal = user_info.get("investmentGoal", "")
         period = PERIOD_MAP.get(user_info.get("investmentPeriod", ""), "")
         profile = user_info.get("profileType", "")
-        risk = user_info.get("riskTolerance", 3)
-        risk_text = "낮은 편" if risk <= 2 else "높은 편" if risk >= 4 else "보통"
-        user_summary = f"투자 목표: {goal}, 투자 기간: {period}, 투자 성향: {profile}, 리스크 허용도: {risk_text}"
+        user_summary = f"투자 목표: {goal}, 투자 기간: {period}, 투자 성향: {profile}"
 
     for stock_code in portfolio:
         name = STOCK_NAME.get(stock_code, stock_code)
@@ -163,6 +160,7 @@ def generate_portfolio_reasons(portfolio: dict, sentiment_scores: dict, strategy
             contents=prompt
         )
         portfolio[stock_code]["reason"] = response.text.strip()
+        time.sleep(5)  # 호출 간 5초 대기 추가
 
     return portfolio
 
