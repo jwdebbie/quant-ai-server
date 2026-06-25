@@ -47,7 +47,7 @@ def run_agent(request: AgentRequest):
         "news_articles": [],
         "sentiment_scores": {},
         "portfolio": {},
-        "portfolio_reason": "",
+        "report": "",
         "risk_ok": False,
         "error_log": []
     })
@@ -76,7 +76,7 @@ def generate_report():
         "news_articles": [],
         "sentiment_scores": {},
         "portfolio": {},
-        "portfolio_reason": "",
+        "report": "",
         "risk_ok": False,
         "error_log": []
     })
