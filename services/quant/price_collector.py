@@ -4,37 +4,107 @@ import os
 import json
 import time
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
+from services.config import STOCK_LIST, STOCK_CODES
 
 load_dotenv()
 
-KIS_APP_KEY = os.getenv("KIS_APP_KEY")
+KIS_APP_KEY    = os.getenv("KIS_APP_KEY")
 KIS_APP_SECRET = os.getenv("KIS_APP_SECRET")
 
 TICKERS_OVERSEAS = []
+TICKERS_DOMESTIC = STOCK_CODES  # config.py에서 가져옴
 
-TICKERS_DOMESTIC = [
-    "005930",  # 삼성전자
-    "000660",  # SK하이닉스
-    "402340",  # SK스퀘어
-    "207940",  # 삼성바이오로직스
-    "005380",  # 현대차
-    "373220",  # LG에너지솔루션
-    "032830",  # 삼성생명
-    "028260",  # 삼성물산
-    "329180",  # HD현대중공업
-    "000270",  # 기아
-]
+_TOKEN_CACHE_FILE = ".kis_token.json"
 
+# ── 재시도 로직 ──────────────────────────────────────────────
+def _download_with_retry(ticker: str, period: str = "1y", max_retry: int = 3) -> pd.DataFrame:
+    delay = 1
+    for attempt in range(1, max_retry + 1):
+        try:
+            df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+            if not df.empty:
+                df.columns = df.columns.get_level_values(0)
+                return df
+            raise ValueError("빈 DataFrame 반환")
+        except Exception as e:
+            if attempt == max_retry:
+                print(f"[ERROR] {ticker} 수집 최종 실패: {e}")
+                return pd.DataFrame()
+            print(f"[WARN] {ticker} 수집 실패 ({attempt}/{max_retry}), {delay}초 후 재시도: {e}")
+            time.sleep(delay)
+            delay *= 2  # 지수 백오프: 1→2→4초
+    return pd.DataFrame()
+
+
+# ── 데이터 품질 검증 ─────────────────────────────────────────
+def _validate(code: str, df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+
+    before = len(df)
+
+    # 주가 0 이하 필터링
+    df = df[df["Close"] > 0]
+
+    # 등락률 ±30% 초과 이상치 감지 (제거하지 않고 경고만)
+    pct = df["Close"].pct_change().abs()
+    spikes = df[pct > 0.30]
+    if not spikes.empty:
+        print(f"[WARN] {code} 등락률 ±30% 초과 {len(spikes)}건 감지:")
+        for date, row in spikes.iterrows():
+            print(f"       {date.date()} 종가={row['Close']:,.0f}  등락률={pct[date]:.1%}")
+
+    after = len(df)
+    if after < before:
+        print(f"[INFO] {code} 이상 데이터 {before - after}건 제거 ({before}→{after})")
+
+    return df
+
+
+# ── 수집 실패 로그 ────────────────────────────────────────────
+_fail_log: list[dict] = []
+
+def _record_fail(code: str, reason: str):
+    _fail_log.append({
+        "stock_code": code,
+        "reason":     reason,
+        "failed_at":  datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    })
+    print(f"[FAIL] {code} 수집 실패 기록: {reason}")
+
+
+def get_fail_log() -> list[dict]:
+    return _fail_log
+
+
+# ── 주가 수집 ────────────────────────────────────────────────
 def collect_overseas_prices() -> dict:
     result = {}
     for ticker in TICKERS_OVERSEAS:
-        df = yf.download(ticker, period="1y", auto_adjust=True)
-        df.columns = df.columns.get_level_values(0)
+        df = _download_with_retry(ticker)
+        if df.empty:
+            _record_fail(ticker, "yfinance 수집 실패")
+            continue
+        df = _validate(ticker, df)
         result[ticker] = df
         print(f"{ticker} 수집 완료: {len(df)}개 데이터")
     return result
+
+
+def collect_domestic_prices() -> dict:
+    result = {}
+    for code in TICKERS_DOMESTIC:
+        df = _download_with_retry(f"{code}.KS")
+        if df.empty:
+            _record_fail(code, "yfinance 수집 실패")
+            continue
+        df = _validate(code, df)
+        result[code] = df
+        print(f"{code}({STOCK_LIST.get(code, '')}) 수집 완료: {len(df)}개 데이터")
+    return result
+
 
 def save_to_csv(price_data: dict):
     os.makedirs("data", exist_ok=True)
@@ -43,11 +113,10 @@ def save_to_csv(price_data: dict):
         df.to_csv(path)
         print(f"{ticker} CSV 저장 완료: {path}")
 
-_TOKEN_CACHE_FILE = ".kis_token.json"
 
+# ── KIS API (현재가 단건 조회) ───────────────────────────────
 def get_kis_token() -> str:
     now = datetime.now().timestamp()
-
     if os.path.exists(_TOKEN_CACHE_FILE):
         with open(_TOKEN_CACHE_FILE) as f:
             cached = json.load(f)
@@ -57,9 +126,9 @@ def get_kis_token() -> str:
     res = requests.post(
         "https://openapivts.koreainvestment.com:29443/oauth2/tokenP",
         json={
-            "appkey": KIS_APP_KEY,
-            "appsecret": KIS_APP_SECRET,
-            "grant_type": "client_credentials"
+            "appkey":       KIS_APP_KEY,
+            "appsecret":    KIS_APP_SECRET,
+            "grant_type":   "client_credentials",
         }
     )
     data = res.json()
@@ -70,37 +139,58 @@ def get_kis_token() -> str:
         json.dump({"token": token, "expires_at": now + 23 * 3600}, f)
     return token
 
-def get_domestic_price(token: str, stock_code: str) -> dict:
+
+def get_current_price(token: str, stock_code: str) -> int:
     res = requests.get(
         "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price",
         headers={
             "authorization": f"Bearer {token}",
-            "tr_id": "FHKST01010100",
-            "appkey": KIS_APP_KEY,
-            "appsecret": KIS_APP_SECRET
+            "tr_id":         "FHKST01010100",
+            "appkey":        KIS_APP_KEY,
+            "appsecret":     KIS_APP_SECRET,
         },
         params={
             "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": stock_code
+            "fid_input_iscd":         stock_code,
         }
     )
-    return res.json()
+    data = res.json()
+    try:
+        return int(data["output"]["stck_prpr"])
+    except (KeyError, ValueError):
+        return 0
 
-def collect_domestic_prices() -> dict:
-    result = {}
+
+# ── 현재가 Redis 저장 ─────────────────────────────────────────
+def save_current_prices_to_redis(redis_client) -> dict:
+    token = get_kis_token()
+    saved = {}
+
     for code in TICKERS_DOMESTIC:
-        df = yf.download(f"{code}.KS", period="1y", auto_adjust=True)
-        df.columns = df.columns.get_level_values(0)
-        result[code] = df
-        print(f"{code} 수집 완료: {len(df)}개 데이터")
-    return result
+        price = get_current_price(token, code)
+        if price <= 0:
+            print(f"[WARN] {code} 현재가 0원 — Redis 저장 건너뜀")
+            continue
+
+        value = json.dumps({
+            "price":     price,
+            "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        })
+        redis_client.set(f"price:{code}", value)
+        saved[code] = price
+        print(f"price:{code} → {price:,}원 저장 완료")
+        time.sleep(0.3)  # KIS API 초당 호출 제한 방어
+
+    return saved
+
 
 if __name__ == "__main__":
-    print("=== 해외 주가 수집 시작 ===")
-    price_data = collect_overseas_prices()
-    save_to_csv(price_data)
+    print("=== 국내 주가 수집 시작 ===")
+    price_data = collect_domestic_prices()
+    print(f"\n수집 완료: {len(price_data)}/{len(TICKERS_DOMESTIC)}종목")
 
-    print("\n=== 국내 주가 수집 시작 ===")
-    domestic_data = collect_domestic_prices()
-    print("\n국내 주가 수집 결과:", {k: len(v) for k, v in domestic_data.items()})
-    print("완료!")
+    fails = get_fail_log()
+    if fails:
+        print(f"\n[실패 목록] {len(fails)}건:")
+        for f in fails:
+            print(f"  {f['stock_code']}: {f['reason']}")
