@@ -9,6 +9,8 @@ load_dotenv()
 
 import time
 
+from services.config import STOCK_LIST as STOCK_NAME
+
 # 투자 기간 한글 변환
 PERIOD_MAP = {
     "UNDER_1Y": "1년 미만",
@@ -17,19 +19,7 @@ PERIOD_MAP = {
     "OVER_5Y": "5년 이상"
 }
 
-# 종목명 매핑
-STOCK_NAME = {
-    "005930": "삼성전자",
-    "000660": "SK하이닉스",
-    "402340": "SK스퀘어",
-    "207940": "삼성바이오로직스",
-    "005380": "현대차",
-    "373220": "LG에너지솔루션",
-    "032830": "삼성생명",
-    "028260": "삼성물산",
-    "329180": "HD현대중공업",
-    "000270": "기아"
-}
+# STOCK_NAME(종목코드 → 이름)은 services/config.py에서 관리
 
 def calculate_weights(ranked_stocks: list, sentiment_scores: dict, profile_type: str, risk_tolerance: int = 3, investment_period: str = "") -> dict:
 

@@ -8,39 +8,14 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from models.state import AgentState
 from db.database import save_news_articles
+from services.config import STOCK_LIST, STOCK_TO_CORP
 
 load_dotenv()
 
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 
-# 조회할 종목 목록 (국장 상위 10개)
-STOCK_LIST = {
-    "005930": "삼성전자",
-    "000660": "SK하이닉스",
-    "402340": "SK스퀘어",
-    "207940": "삼성바이오로직스", 
-    "005380": "현대차",
-    "373220": "LG에너지솔루션",
-    "032830": "삼성생명",
-    "028260": "삼성물산",
-    "329180": "HD현대중공업",
-    "000270": "기아"
-}
-
-# 종목코드 → DART 고유번호 매핑
-STOCK_TO_CORP = {
-    "005930": "00126380",  # 삼성전자
-    "000660": "00164779",  # SK하이닉스
-    "402340": "01596425",  # SK스퀘어
-    "207940": "01040494",  # 삼성바이오로직스
-    "005380": "00164742",  # 현대차
-    "373220": "01515323",  # LG에너지솔루션
-    "032830": "00126256",  # 삼성생명
-    "028260": "00149655",  # 삼성물산
-    "329180": "01390344",  # HD현대중공업
-    "000270": "00106641",  # 기아
-}
+# 조회할 종목 목록, 종목코드 → DART 고유번호 매핑은 services/config.py에서 관리
 
 def fetch_news(stock_name: str, display: int = 10) -> list:
     url = "https://openapi.naver.com/v1/search/news.json"

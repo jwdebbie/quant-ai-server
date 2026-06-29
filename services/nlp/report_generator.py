@@ -5,24 +5,13 @@ from google import genai
 import os
 from dotenv import load_dotenv
 from models.state import AgentState
+from services.config import STOCK_LIST as STOCK_NAME
 
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-STOCK_NAME = {
-    "005930": "삼성전자",
-    "000660": "SK하이닉스",
-    "402340": "SK스퀘어",
-    "009150": "삼성전기",
-    "207940": "삼성바이오로직스",
-    "005380": "현대차",
-    "373220": "LG에너지솔루션",
-    "032830": "삼성생명",
-    "028260": "삼성물산",
-    "329180": "HD현대중공업",
-    "000270": "기아"
-}
+# STOCK_NAME(종목코드 → 이름)은 services/config.py에서 관리
 
 def generate_report(sentiment_scores: dict, strategy_result: dict, news_articles: list = []) -> str:
     sentiment_summary = ""
