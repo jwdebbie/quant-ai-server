@@ -1,4 +1,5 @@
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
+
 from models.state import AgentState
 from services.nlp.news_collector import collect_news_node
 from services.nlp.sentiment import analyze_sentiment_node
@@ -8,32 +9,29 @@ from services.portfolio_calculator import portfolio_calc_node
 # 희재 노드 import
 from agents.agent1_collect import collect_price_node, calculate_indicators_node
 from agents.agent2_strategy import strategy_node, backtest_node
+from agents.safe_node import safe_node
 
-# 주원 더미 노드
-
-# (1) 뉴스 더미 함수 교체 완료
-# (2) 감성 분석 더미 함수 교체 완료
-# (3) 종목 추천 근거 함수 교체 완료
-# (4) 포트폴리오 계산 더미 함수 교체 완료
+# 국면4: execute_order는 별도 그래프(agents/agent3_execute.py의 build_execute_graph)로 분리됨
+# recommend와 execute가 별개 API(/api/portfolio/recommend, /api/portfolio/execute)이기 때문
 
 
-def execute_order_node(state: AgentState) -> dict:
-    return {"orders": []}
+def build_recommend_graph():
+    """추천 파이프라인 전용 그래프 (collect_price ~ recommendation_reason)
 
-# StateGraph 구성
-def build_graph():
+    모든 노드를 safe_node로 감싸서, 한 노드가 예외를 던져도 그래프 전체가 죽지 않고
+    error_log에 기록한 뒤 다음 노드로 넘어가게 함
+    """
     graph = StateGraph(AgentState)
 
-    # 노드 등록
-    graph.add_node("collect_price", collect_price_node)
-    graph.add_node("calculate_indicators", calculate_indicators_node)
-    graph.add_node("collect_news", collect_news_node)
-    graph.add_node("analyze_sentiment", analyze_sentiment_node)
-    graph.add_node("strategy", strategy_node)
-    graph.add_node("backtest", backtest_node)
-    graph.add_node("portfolio_calc", portfolio_calc_node)
-    graph.add_node("recommendation_reason", generate_report_node)
-    graph.add_node("execute_order", execute_order_node)
+    # 노드 등록 (전부 safe_node로 감쌈)
+    graph.add_node("collect_price", safe_node(collect_price_node))
+    graph.add_node("calculate_indicators", safe_node(calculate_indicators_node))
+    graph.add_node("collect_news", safe_node(collect_news_node))
+    graph.add_node("analyze_sentiment", safe_node(analyze_sentiment_node))
+    graph.add_node("strategy", safe_node(strategy_node))
+    graph.add_node("backtest", safe_node(backtest_node))
+    graph.add_node("portfolio_calc", safe_node(portfolio_calc_node))
+    graph.add_node("recommendation_reason", safe_node(generate_report_node))
 
     # 실행 순서 연결
     graph.set_entry_point("collect_price")
@@ -44,32 +42,29 @@ def build_graph():
     graph.add_edge("strategy", "backtest")
     graph.add_edge("backtest", "portfolio_calc")
     graph.add_edge("portfolio_calc", "recommendation_reason")
-    graph.add_edge("recommendation_reason", "execute_order")
-    graph.add_edge("execute_order", END)
+    graph.add_edge("recommendation_reason", END)
 
     return graph.compile()
 
 
 # 테스트
 if __name__ == "__main__":
-    app = build_graph()
+    app = build_recommend_graph()
     result = app.invoke({
         "user_id": 1,
         "risk_level": "NEUTRAL",
+        "investment_amount": 10000000,
+        "investment_goal": "균형 잡힌 수익",
         "risk_tolerance": 3,
         "investment_period": "OVER_5Y",
-        "investment_goal": "균형 잡힌 수익",
-        "investment_amount": 10000000,
         "price_data": {},
         "indicators": {},
         "strategy_result": {},
         "backtest_result": {},
-        "orders": [],
         "news_articles": [],
         "sentiment_scores": {},
         "portfolio": {},
         "report": "",
-        "risk_ok": False,
         "error_log": []
     })
 
