@@ -94,18 +94,19 @@ def collect_news_to_csv():
     df.to_csv("data/news_articles.csv", index=False, encoding="utf-8-sig")
     print(f"\n총 {len(all_news)}건 저장 완료 → data/news_articles.csv")
     
-    # DB 저장 추가
+    # DB 저장 + news_id_map 받기 (전엔 결과를 버리고 있었음)
+    news_id_map = {}
     try:
-        save_news_articles(all_news)
+        news_id_map = save_news_articles(all_news)
     except Exception as e:
         print(f"DB 저장 실패 (CSV는 정상 저장됨): {e}")
     
-    return all_news
+    return all_news, news_id_map
 
 if __name__ == "__main__":
     collect_news_to_csv()
     
     
 def collect_news_node(state: AgentState) -> dict:
-    news_list = collect_news_to_csv()
-    return {"news_articles": news_list}
+    news_list, news_id_map = collect_news_to_csv()
+    return {"news_articles": news_list, "news_id_map": news_id_map}
