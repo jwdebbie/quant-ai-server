@@ -95,3 +95,19 @@ def save_news_sentiments(sentiment_scores: dict, news_id_map: dict):
     conn.close()
     
     print(f"news_sentiments {saved_count}건 저장 완료")
+
+
+def save_collection_failures(fail_log: list):
+    if not fail_log:
+        return
+    conn = get_connection()
+    cur = conn.cursor()
+    for entry in fail_log:
+        cur.execute(
+            "INSERT INTO collection_failures (stock_code, reason, failed_at) VALUES (%s, %s, %s)",
+            (entry["stock_code"], entry["reason"], entry["failed_at"]),
+        )
+    conn.commit()
+    cur.close()
+    conn.close()
+    print(f"collection_failures {len(fail_log)}건 저장 완료")
