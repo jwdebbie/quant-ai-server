@@ -15,8 +15,6 @@ load_dotenv()
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 
-# 조회할 종목 목록, 종목코드 → DART 고유번호 매핑은 services/config.py에서 관리
-
 def fetch_news(stock_name: str, display: int = 10) -> list:
     url = "https://openapi.naver.com/v1/search/news.json"
     headers = {
