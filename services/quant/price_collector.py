@@ -3,20 +3,14 @@ import pandas as pd
 import os
 import json
 import time
-import requests
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from services.config import STOCK_LIST, STOCK_CODES
 
 load_dotenv()
 
-KIS_APP_KEY    = os.getenv("KIS_APP_KEY")
-KIS_APP_SECRET = os.getenv("KIS_APP_SECRET")
-
 TICKERS_OVERSEAS = []
 TICKERS_DOMESTIC = STOCK_CODES  # config.py에서 가져옴
-
-_TOKEN_CACHE_FILE = ".kis_token.json"
 
 # ── 재시도 로직 ──────────────────────────────────────────────
 def _download_with_retry(ticker: str, period: str = "1y", max_retry: int = 3) -> pd.DataFrame:
@@ -118,60 +112,23 @@ def save_to_csv(price_data: dict):
         print(f"{ticker} CSV 저장 완료: {path}")
 
 
-# ── KIS API (현재가 단건 조회) ───────────────────────────────
-def get_kis_token() -> str:
-    now = datetime.now().timestamp()
-    if os.path.exists(_TOKEN_CACHE_FILE):
-        with open(_TOKEN_CACHE_FILE) as f:
-            cached = json.load(f)
-        if cached.get("token") and now < cached.get("expires_at", 0):
-            return cached["token"]
-
-    res = requests.post(
-        "https://openapivts.koreainvestment.com:29443/oauth2/tokenP",
-        json={
-            "appkey":       KIS_APP_KEY,
-            "appsecret":    KIS_APP_SECRET,
-            "grant_type":   "client_credentials",
-        }
-    )
-    data = res.json()
-    if "access_token" not in data:
-        raise RuntimeError(f"KIS 토큰 발급 실패: {data}")
-    token = data["access_token"]
-    with open(_TOKEN_CACHE_FILE, "w") as f:
-        json.dump({"token": token, "expires_at": now + 23 * 3600}, f)
-    return token
-
-
-def get_current_price(token: str, stock_code: str) -> int:
-    res = requests.get(
-        "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price",
-        headers={
-            "authorization": f"Bearer {token}",
-            "tr_id":         "FHKST01010100",
-            "appkey":        KIS_APP_KEY,
-            "appsecret":     KIS_APP_SECRET,
-        },
-        params={
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd":         stock_code,
-        }
-    )
-    data = res.json()
+# ── 현재가 조회 (yfinance) ────────────────────────────────────
+def get_current_price_yfinance(stock_code: str) -> int:
     try:
-        return int(data["output"]["stck_prpr"])
-    except (KeyError, ValueError):
+        ticker = yf.Ticker(f"{stock_code}.KS")
+        price = ticker.fast_info["last_price"]
+        return int(price) if price and price > 0 else 0
+    except Exception as e:
+        print(f"[WARN] {stock_code} yfinance 현재가 조회 실패: {e}")
         return 0
 
 
 # ── 현재가 Redis 저장 ─────────────────────────────────────────
 def save_current_prices_to_redis(redis_client) -> dict:
-    token = get_kis_token()
     saved = {}
 
     for code in TICKERS_DOMESTIC:
-        price = get_current_price(token, code)
+        price = get_current_price_yfinance(code)
         if price <= 0:
             print(f"[WARN] {code} 현재가 0원 — Redis 저장 건너뜀")
             continue
@@ -183,7 +140,6 @@ def save_current_prices_to_redis(redis_client) -> dict:
         redis_client.set(f"price:{code}", value)
         saved[code] = price
         print(f"price:{code} → {price:,}원 저장 완료")
-        time.sleep(0.3)  # KIS API 초당 호출 제한 방어
 
     return saved
 
