@@ -79,6 +79,10 @@ def get_fail_log() -> list[dict]:
     return _fail_log
 
 
+def clear_fail_log():
+    _fail_log.clear()
+
+
 # ── 주가 수집 ────────────────────────────────────────────────
 def collect_overseas_prices() -> dict:
     result = {}
@@ -185,6 +189,9 @@ def save_current_prices_to_redis(redis_client) -> dict:
 
 
 if __name__ == "__main__":
+    import sys
+
+    # ── 주가 수집 테스트 ──────────────────────────────────────
     print("=== 국내 주가 수집 시작 ===")
     price_data = collect_domestic_prices()
     print(f"\n수집 완료: {len(price_data)}/{len(TICKERS_DOMESTIC)}종목")
@@ -194,3 +201,30 @@ if __name__ == "__main__":
         print(f"\n[실패 목록] {len(fails)}건:")
         for f in fails:
             print(f"  {f['stock_code']}: {f['reason']}")
+
+    # ── Redis 저장 테스트 (fakeredis 우선, 없으면 실제 Redis) ──
+    print("\n=== 현재가 Redis 저장 테스트 ===")
+    try:
+        import fakeredis
+        r = fakeredis.FakeRedis(decode_responses=True)
+        print("[INFO] fakeredis 사용 (로컬 테스트 모드)")
+    except ImportError:
+        import redis as _redis
+        r = _redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=int(os.getenv("REDIS_PORT", 6379)),
+            db=0,
+            decode_responses=True,
+        )
+        print("[INFO] 실제 Redis 사용")
+
+    try:
+        saved = save_current_prices_to_redis(r)
+        print(f"\nRedis 저장 완료: {len(saved)}/{len(TICKERS_DOMESTIC)}종목")
+        # 저장된 값 확인
+        for code in list(saved.keys())[:3]:
+            val = r.get(f"price:{code}")
+            print(f"  price:{code} = {val}")
+    except Exception as e:
+        print(f"[ERROR] Redis 저장 실패: {e}")
+        sys.exit(1)
