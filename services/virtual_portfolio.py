@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from db.database import get_connection
 from services.config import STOCK_CODES
 
-PRICE_STALE_THRESHOLD_MINUTES = 10
+PRICE_STALE_THRESHOLD_MINUTES = 30
 DEFAULT_INITIAL_BALANCE = 10_000_000  # 초기 가상 잔고 (1천만원), 정책 확정되면 조정
 
 
