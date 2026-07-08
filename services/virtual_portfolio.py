@@ -7,6 +7,7 @@ VirtualPortfolio - 사용자별 가상 계좌 관리 클래스
 - 현재가는 Redis (B파트가 price:{stock_code} 형식으로 write한 값)에서 read
 - stock_code 유효성은 services/config.py의 STOCK_CODES로 검증
 """
+from services.quant.price_collector import get_current_price_yfinance
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -43,21 +44,13 @@ class VirtualPortfolio:
         self.redis_client = redis_client
         self.user_id = user_id
 
-    # ---------- 현재가 조회 (Redis) ----------
+    # ---------- 현재가 조회 (yfinance로 교체) ----------
 
     def get_current_price(self, stock_code: str) -> float:
-        raw = self.redis_client.get(f"price:{stock_code}")
-        if raw is None:
-            raise PriceNotAvailableError(f"{stock_code}의 현재가를 Redis에서 찾을 수 없습니다")
-
-        data = json.loads(raw)
-        updated_at = datetime.fromisoformat(data["updatedAt"].replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
-        if now - updated_at > timedelta(minutes=PRICE_STALE_THRESHOLD_MINUTES):
-            raise PriceStaleError(
-                f"{stock_code}의 현재가가 {PRICE_STALE_THRESHOLD_MINUTES}분 이상 오래되었습니다"
-            )
-        return float(data["price"])
+        price = get_current_price_yfinance(stock_code)
+        if price <= 0:
+            raise PriceNotAvailableError(f"{stock_code}의 현재가를 조회할 수 없습니다")
+        return float(price)
 
     # ---------- 매수 ----------
 
