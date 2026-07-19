@@ -103,7 +103,10 @@ def calculate_portfolio(state: AgentState) -> dict:
             "weight": weight,
             "amount": amount,
             "quantity": quantity,
-            "reason": ""  # 추후 Gemini로 채울 예정
+            "reason": "",  
+            "sentiment": "positive" if sentiment_scores.get(stock_code, {}).get("score", 0) > 0.3 
+                 else "negative" if sentiment_scores.get(stock_code, {}).get("score", 0) < 0 
+                 else "caution"
         }
 
     print(f"포트폴리오 계산 완료 ({profile_type}): {len(portfolio)}개 종목")
